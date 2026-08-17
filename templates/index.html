@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurante - Menú Principal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; color: #333; }
+        header { background: #1e293b; color: white; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
+        nav a { color: #f8fafc; margin: 0 15px; text-decoration: none; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+        .container { max-width: 1100px; margin: auto; }
+        .category-section { margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card h3 { margin-top: 0; color: #0f172a; }
+        .price { font-size: 1.25rem; font-weight: bold; color: #16a34a; }
+        .badge { background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ Sistema de Restaurante Real</h1>
+            <nav>
+                <a href="/">Menú</a>
+                <a href="/ordenes">Órdenes</a>
+                <a href="/facturas">Facturas</a>
+            </nav>
+        </header>
+
+        <h2>Menú de Platillos</h2>
+        {% for cat in categorias %}
+        <div class="category-section">
+            <h3>{{ cat.nombre }} <span class="badge">{{ cat.descripcion }}</span></h3>
+            <div class="grid">
+                {% for p in cat.platillos %}
+                <div class="card">
+                    <h4>{{ p.nombre }} ({{ p.codigo }})</h4>
+                    <p>{{ p.descripcion }}</p>
+                    <p class="price">${{ "%.2f"|format(p.precio) }}</p>
+                    <p><small>Prep: {{ p.tiempo_preparacion_min }} mins</small></p>
+                    <a href="/platillo/{{ p.id }}">Ver detalle</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
