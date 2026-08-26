@@ -11,10 +11,17 @@ class Config:
     DB_PORT: str = os.getenv("DB_PORT", "5432")
     DB_NAME: str = os.getenv("DB_NAME", "restaurante_db")
 
+    #Flask Config 
+    SECRET_KEY = "restaurante-flask" 
+
+    #ORM Config
     SQLALCHEMY_DATABASE_URI = (
         f"postgresql://{quote_plus(DB_USER)}:{quote_plus(DB_PASSWORD)}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    SECRET_KEY = os.getenv("SECRET_KEY", "restaurante_secret_key")
+
+    #Restauracion de DB
+    BACKUP_FILE = os.getenv("DB_BACKUP")
+    RESTORE_PG_CMD = ["pg_restore", "-h", DB_HOST, "-p", DB_PORT, "-U", DB_USER, "-d", DB_NAME,BACKUP_FILE]

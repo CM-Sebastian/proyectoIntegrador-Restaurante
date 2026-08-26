@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify
 from config import Config
 from models import db, Categoria, Platillo, Orden, Factura, Mesa, Usuario
+from routes.main_routes import mainRoutes
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -9,6 +10,8 @@ app.config.from_object(Config)
 app.config["SQLALCHEMY_DATABASE_URI"] = Config.SQLALCHEMY_DATABASE_URI
 
 db.init_app(app)
+
+app.register_blueprint(mainRoutes)
 
 @app.route("/")
 def inicio():
