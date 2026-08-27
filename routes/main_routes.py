@@ -1,18 +1,56 @@
 from flask import Blueprint, render_template, abort
 from jinja2 import TemplateNotFound
-from flask.views import View
-
+from ..services.restaurante_service import consulta_Categ
 
 mainRoutes = Blueprint('main_pages', __name__,template_folder='templates')
 
+@mainRoutes.route('/')
+def mainPage():
+    return render_template("index.html")
 
-class UserList(View):
 
-    def __init__(self):
-        self.main_page = "/"
+@mainRoutes.route('/<route>')
+def mainRouteHandler(route):
+    try:
+        return render_template(f'pages/{route}.html')
+    except TemplateNotFound:
+        abort(404)
 
-    def proccess_request(self,request):
-        #Aqui va parte de db
-        return render_template(self.main_page, objects={})
 
-mainRoutes.add_url_rule("/users/", view_func=UserList.as_view("user_list"))
+@mainRoutes.errorhandler(404)
+def notfoundError(error):
+    return render_template('404.html'),404
+
+@mainRoutes.route('/menu/')
+def viewMenu():
+    pass
+
+
+@mainRoutes.route('/mesa/<id>',methods=['POST'])
+def pedidoMesa():
+    pass
+
+
+@mainRoutes.route('/ordenes',methods=['POST'])
+def crearOrden():
+    pass
+
+@mainRoutes.route('/admin/ordenes')
+def viewAdminOrdenes():
+    pass
+
+@mainRoutes.route('/ordenes/<id>',methods=['PUT'])
+def actualizarOrden():
+    pass
+
+@mainRoutes.route('/login',methods=['POST'])
+def login():
+    pass
+
+
+
+@mainRoutes.route('/test')
+def test():
+    return consulta_Categ
+
+

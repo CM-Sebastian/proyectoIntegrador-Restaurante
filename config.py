@@ -4,7 +4,7 @@ from urllib.parse import quote_plus
 
 load_dotenv()
 
-class Config:
+class appConfig:
     DB_USER: str = os.getenv("DB_USER", "postgres")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "12345")
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
@@ -24,4 +24,3 @@ class Config:
 
     #Restauracion de DB
     BACKUP_FILE = os.getenv("DB_BACKUP")
-    RESTORE_PG_CMD = ["pg_restore", "-h", DB_HOST, "-p", DB_PORT, "-U", DB_USER, "-d", DB_NAME,BACKUP_FILE]
