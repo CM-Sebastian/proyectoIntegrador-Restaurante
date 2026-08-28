@@ -1,15 +1,23 @@
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.automap import automap_base
-from app import app
 
-#en construccion: se usa relfexion con automap
-with app.app_context():
-    # 1. Crear una clase base para automap
-    BaseReflejada = automap_base()
+
+db = SQLAlchemy()
+
+# 1. Crear la base para automap
+Base = automap_base()
+
+
+tablas = {}
+
+def init_db(app):
+    global Usuario, Pedido
     
-    # 2. Reflejar las tablas desde el motor de la base de datos (db.engine)
-    BaseReflejada.prepare(autoload_with=db.engine)
-    
-    # 3. Acceder a los modelos mapeados automáticamente
-    # Si tienes una tabla llamada 'usuarios', Automap creará una clase con el mismo nombre
-    Usuario = BaseReflejada.classes.usuarios
-    Pedido = BaseReflejada.classes.pedidos
+    db.init_app(app)
+
+# 2. Reflejar esquemas y preparar clases dentro del contexto de Flask
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine)
+
+        for nombre_tabla, clase_orm in Base.classes.items():
+            tablas[nombre_tabla] = clase_orm 

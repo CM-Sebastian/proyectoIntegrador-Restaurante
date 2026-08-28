@@ -1,13 +1,14 @@
-from flask import Blueprint, render_template, abort
+from flask import Blueprint, render_template, abort, jsonify
 from jinja2 import TemplateNotFound
-from ..services.restaurante_service import consulta_Categ
+from ..services.restaurante_service import *
 
-mainRoutes = Blueprint('main_pages', __name__,template_folder='templates')
+#from ..services.restaurante_service import consulta_Categ
+
+mainRoutes = Blueprint('main_pages', __name__, template_folder='templates')
 
 @mainRoutes.route('/')
 def mainPage():
     return render_template("index.html")
-
 
 @mainRoutes.route('/<route>')
 def mainRouteHandler(route):
@@ -23,7 +24,7 @@ def notfoundError(error):
 
 @mainRoutes.route('/menu/')
 def viewMenu():
-    pass
+    return jsonify(verMenu())
 
 
 @mainRoutes.route('/mesa/<id>',methods=['POST'])
@@ -48,9 +49,8 @@ def login():
     pass
 
 
-
-@mainRoutes.route('/test')
-def test():
-    return consulta_Categ
+@mainRoutes.route('/test/<string:tabla>')
+def test(tabla):
+    return selectTabla(tabla)
 
 

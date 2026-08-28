@@ -3,3 +3,5 @@
 .env
 database/__pycache__
 routes/__pycache__
+
+/.github/*
