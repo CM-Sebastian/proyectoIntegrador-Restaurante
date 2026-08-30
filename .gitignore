@@ -3,5 +3,7 @@
 .env
 database/__pycache__
 routes/__pycache__
+services/__pycache__
 
+app/__pycache__
 /.github/*
