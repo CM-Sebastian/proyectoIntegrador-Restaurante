@@ -3,49 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurante - Menú Principal</title>
+    <title>FetchFood</title>
+    <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; color: #333; }
-        header { background: #1e293b; color: white; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
-        nav a { color: #f8fafc; margin: 0 15px; text-decoration: none; font-weight: bold; }
-        nav a:hover { text-decoration: underline; }
-        .container { max-width: 1100px; margin: auto; }
-        .category-section { margin-bottom: 30px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .card h3 { margin-top: 0; color: #0f172a; }
-        .price { font-size: 1.25rem; font-weight: bold; color: #16a34a; }
-        .badge { background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .inicio { max-width: 640px; margin: 0 auto; padding: var(--space-5) var(--space-3); text-align: center; }
+        .inicio__logo { font-family: var(--font-titulos); font-weight: 800; color: var(--color-acento); font-size: 2rem; margin-bottom: 4px; }
+        .inicio__lista { display: grid; gap: var(--space-3); margin-top: var(--space-5); text-align: left; }
+        .inicio__tarjeta { background: var(--color-superficie); border-radius: var(--radio-tarjeta); box-shadow: var(--sombra-tarjeta); padding: var(--space-3); }
+        .inicio__tarjeta a.btn { margin-top: var(--space-2); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🍽️ Sistema de Restaurante Real</h1>
-            <nav>
-                <a href="/">Menú</a>
-                <a href="/ordenes">Órdenes</a>
-                <a href="/facturas">Facturas</a>
-            </nav>
-        </header>
+<a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+<main class="inicio" id="contenido-principal">
+    <p class="inicio__logo">FetchFood</p>
+    <h1>Sistema de pedidos del restaurante</h1>
+    <p>En el restaurante, cada mesa tiene un código QR que abre directamente el menú de esa mesa. Los enlaces de abajo son para probar las 3 interfaces del proyecto.</p>
 
-        <h2>Menú de Platillos</h2>
-        {% for cat in categorias %}
-        <div class="category-section">
-            <h3>{{ cat.nombre }} <span class="badge">{{ cat.descripcion }}</span></h3>
-            <div class="grid">
-                {% for p in cat.platillos %}
-                <div class="card">
-                    <h4>{{ p.nombre }} ({{ p.codigo }})</h4>
-                    <p>{{ p.descripcion }}</p>
-                    <p class="price">${{ "%.2f"|format(p.precio) }}</p>
-                    <p><small>Prep: {{ p.tiempo_preparacion_min }} mins</small></p>
-                    <a href="/platillo/{{ p.id }}">Ver detalle</a>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
+    <div class="inicio__lista">
+        <article class="inicio__tarjeta">
+            <h2> Cliente</h2>
+            <p>Menú digital de la mesa: elegir platillos, armar el pedido y ver su estado en tiempo real.</p>
+            <a class="btn btn-primario" href="/cliente?mesa=1">Abrir como cliente (mesa 1)</a>
+        </article>
+        <article class="inicio__tarjeta">
+            <h2>Cocina</h2>
+            <p>Tablero en tiempo real de los pedidos: pendientes, en preparación y listos para servir.</p>
+            <a class="btn btn-secundario" href="/cocina">Abrir cocina</a>
+        </article>
+        <article class="inicio__tarjeta">
+            <h2> Administración</h2>
+            <p>Mapa de mesas, gestión del menú/inventario y reportes del restaurante.</p>
+            <a class="btn btn-secundario" href="/admin">Abrir administración</a>
+        </article>
     </div>
+</main>
 </body>
 </html>

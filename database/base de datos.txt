@@ -1,0 +1,311 @@
+-- -----------------------------------------------------
+-- 1. TABLAS CATÁLOGO / MAESTRAS
+-- -----------------------------------------------------
+
+CREATE TABLE Roles (
+    rol_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE Categorias (
+    categoria_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion TEXT
+);
+
+CREATE TABLE Estados_Orden (
+    estado_orden_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL UNIQUE -- 'Pendiente', 'En Preparación', 'Listo para Servir', 'Entregado', 'Cancelado'
+);
+
+CREATE TABLE Estados_Mesa (
+    estado_mesa_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL UNIQUE -- 'Disponible', 'Ocupada', 'Reservada'
+);
+
+CREATE TABLE Metodos_Pago (
+    metodo_pago_id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE -- 'Efectivo', 'Tarjeta', 'Transferencia/QR'
+);
+
+-- -----------------------------------------------------
+-- 2. TABLAS PRINCIPALES
+-- -----------------------------------------------------
+
+CREATE TABLE Usuarios (
+    usuario_id SERIAL PRIMARY KEY,
+    rol_id INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    contrasena VARCHAR(255) NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_usuarios_roles FOREIGN KEY (rol_id) REFERENCES Roles(rol_id)
+);
+
+CREATE TABLE Mesas (
+    mesa_id SERIAL PRIMARY KEY,
+    numero_mesa INT NOT NULL UNIQUE,
+    estado_mesa_id INT NOT NULL,
+    capacidad INT NOT NULL CHECK (capacidad > 0),
+    CONSTRAINT fk_mesas_estado FOREIGN KEY (estado_mesa_id) REFERENCES Estados_Mesa(estado_mesa_id)
+);
+
+CREATE TABLE Platillos (
+    platillo_id SERIAL PRIMARY KEY,
+    categoria_id INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio NUMERIC(10, 2) NOT NULL CHECK (precio > 0),
+    stock_disponible INT NOT NULL CHECK (stock_disponible >= 0),
+    activo BOOLEAN DEFAULT TRUE,
+    CONSTRAINT fk_platillos_categoria FOREIGN KEY (categoria_id) REFERENCES Categorias(categoria_id)
+);
+
+-- -----------------------------------------------------
+-- 3. TABLAS TRANSACCIONALES
+-- -----------------------------------------------------
+
+CREATE TABLE Ordenes (
+    orden_id SERIAL PRIMARY KEY,
+    mesa_id INT NOT NULL,
+    usuario_id INT, -- Puede ser NULL si el cliente pide directo sin loguearse
+    estado_orden_id INT NOT NULL,
+    metodo_pago_id INT,
+    fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total NUMERIC(10, 2) DEFAULT 0.00 CHECK (total >= 0),
+    CONSTRAINT fk_ordenes_mesa FOREIGN KEY (mesa_id) REFERENCES Mesas(mesa_id),
+    CONSTRAINT fk_ordenes_usuario FOREIGN KEY (usuario_id) REFERENCES Usuarios(usuario_id),
+    CONSTRAINT fk_ordenes_estado FOREIGN KEY (estado_orden_id) REFERENCES Estados_Orden(estado_orden_id),
+    CONSTRAINT fk_ordenes_pago FOREIGN KEY (metodo_pago_id) REFERENCES Metodos_Pago(metodo_pago_id)
+);
+
+CREATE TABLE Detalle_Orden (
+    detalle_id SERIAL PRIMARY KEY,
+    orden_id INT NOT NULL,
+    platillo_id INT NOT NULL,
+    cantidad INT NOT NULL CHECK (cantidad > 0),
+    precio_unitario NUMERIC(10, 2) NOT NULL CHECK (precio_unitario > 0),
+    subtotal NUMERIC(10, 2) NOT NULL CHECK (subtotal > 0),
+    CONSTRAINT fk_detalle_orden FOREIGN KEY (orden_id) REFERENCES Ordenes(orden_id) ON DELETE CASCADE,
+    CONSTRAINT fk_detalle_platillo FOREIGN KEY (platillo_id) REFERENCES Platillos(platillo_id)
+);
+
+CREATE TABLE Movimientos_Inventario (
+    movimiento_id SERIAL PRIMARY KEY,
+    platillo_id INT NOT NULL,
+    tipo_movimiento VARCHAR(20) CHECK (tipo_movimiento IN ('ENTRADA', 'SALIDA_VENTA', 'AJUSTE')),
+    cantidad INT NOT NULL,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_mov_platillo FOREIGN KEY (platillo_id) REFERENCES Platillos(platillo_id)
+);
+
+-- Carga de Catálogos
+INSERT INTO Roles (nombre) VALUES ('Administrador'), ('Cajero'), ('Cocina'), ('Cliente');
+INSERT INTO Estados_Orden (nombre) VALUES ('Pendiente'), ('En Preparación'), ('Listo para Servir'), ('Entregado'), ('Cancelado');
+INSERT INTO Estados_Mesa (nombre) VALUES ('Disponible'), ('Ocupada'), ('Reservada');
+INSERT INTO Metodos_Pago (nombre) VALUES ('Efectivo'), ('Tarjeta de Crédito/Débito'), ('Transferencia/QR');
+INSERT INTO Categorias (nombre, descripcion) VALUES ('Hamburguesas', 'Hamburguesas artesanales'), ('Bebidas', 'Refrescos y jugos'), ('Acompañamientos', 'Papas y snacks');
+
+-- Mesas
+INSERT INTO Mesas (numero_mesa, estado_mesa_id, capacidad) VALUES 
+(1, 1, 4), 
+(2, 1, 2), 
+(3, 1, 4);
+
+-- Platillos con Stock Inicial
+INSERT INTO Platillos (categoria_id, nombre, descripcion, precio, stock_disponible) VALUES 
+(1, 'Hamburguesa Doble Queso', 'Doble carne de res, queso cheddar y tocino', 6.50, 15),
+(1, 'Hamburguesa Crispy Chicken', 'Pollo crujiente con salsa especial', 5.50, 10),
+(2, 'Gaseosa Personal 500ml', 'Coca-Cola o Sprite', 1.50, 50),
+(3, 'Papas Fritas Medianas', 'Papas estilo rústico', 2.50, 30);
+
+-- 1. Función ejecutada por el Trigger
+CREATE OR REPLACE FUNCTION fn_descontar_stock_inventario()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Descontar el stock en la tabla Platillos
+    UPDATE Platillos
+    SET stock_disponible = stock_disponible - NEW.cantidad
+    WHERE platillo_id = NEW.platillo_id;
+
+    -- Registrar la salida en la tabla de movimientos
+    INSERT INTO Movimientos_Inventario (platillo_id, tipo_movimiento, cantidad)
+    VALUES (NEW.platillo_id, 'SALIDA_VENTA', NEW.cantidad);
+
+    -- Desactivar el plato del menú si su stock llega a 0
+    UPDATE Platillos
+    SET activo = FALSE
+    WHERE platillo_id = NEW.platillo_id AND stock_disponible = 0;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Creación del Trigger ligado a Detalle_Orden
+CREATE TRIGGER tg_actualizar_stock
+AFTER INSERT ON Detalle_Orden
+FOR EACH ROW
+EXECUTE FUNCTION fn_descontar_stock_inventario();
+
+CREATE OR REPLACE PROCEDURE sp_RegistrarNuevaOrden(
+    p_numero_mesa INT,
+    p_platillo_id INT,
+    p_cantidad INT,
+    p_metodo_pago_id INT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_mesa_id INT;
+    v_stock_actual INT;
+    v_precio_platillo NUMERIC(10, 2);
+    v_estado_pendiente_id INT;
+    v_orden_id INT;
+    v_subtotal NUMERIC(10, 2);
+BEGIN
+    -- Obtener ID de la mesa
+    SELECT mesa_id INTO v_mesa_id FROM Mesas WHERE numero_mesa = p_numero_mesa;
+    IF v_mesa_id IS NULL THEN
+        RAISE EXCEPTION 'La mesa número % no existe.', p_numero_mesa;
+    END IF;
+
+    -- Verificar stock suficiente y precio del plato
+    SELECT stock_disponible, precio INTO v_stock_actual, v_precio_platillo 
+    FROM Platillos 
+    WHERE platillo_id = p_platillo_id AND activo = TRUE;
+
+    IF v_stock_actual IS NULL THEN
+        RAISE EXCEPTION 'El platillo solicitado no existe o no está activo.';
+    ELSIF v_stock_actual < p_cantidad THEN
+        RAISE EXCEPTION 'Stock insuficiente. Disponible: %, Solicitado: %', v_stock_actual, p_cantidad;
+    END IF;
+
+    -- Obtener estado 'Pendiente'
+    SELECT estado_orden_id INTO v_estado_pendiente_id FROM Estados_Orden WHERE nombre = 'Pendiente';
+
+    -- Calcular Subtotal
+    v_subtotal := v_precio_platillo * p_cantidad;
+
+    -- Insertar Cabecera de la Orden
+    INSERT INTO Ordenes (mesa_id, estado_orden_id, metodo_pago_id, total)
+    VALUES (v_mesa_id, v_estado_pendiente_id, p_metodo_pago_id, v_subtotal)
+    RETURNING orden_id INTO v_orden_id;
+
+    -- Insertar Detalle (Aquí se dispara el Trigger automáticamente)
+    INSERT INTO Detalle_Orden (orden_id, platillo_id, cantidad, precio_unitario, subtotal)
+    VALUES (v_orden_id, p_platillo_id, p_cantidad, v_precio_platillo, v_subtotal);
+
+    -- Marcar la mesa como ocupada
+    UPDATE Mesas SET estado_mesa_id = (SELECT estado_mesa_id FROM Estados_Mesa WHERE nombre = 'Ocupada')
+    WHERE mesa_id = v_mesa_id;
+
+    RAISE NOTICE 'Orden #% registrada exitosamente para la Mesa %', v_orden_id, p_numero_mesa;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Error al registrar la orden: %', SQLERRM;
+        ROLLBACK;
+END;
+$$;
+
+-- Pide 2 Hamburguesas Doble Queso (platillo_id = 1) para la Mesa 1, pagando en Efectivo (metodo_pago_id = 1)
+CALL sp_RegistrarNuevaOrden(1, 1, 2, 1);
+
+--Reporte 1: Platos Más Vendidos e Ingresos Totales por Categoria
+SELECT 
+    c.nombre AS Categoria,
+    p.nombre AS Platillo,
+    SUM(d.cantidad) AS Total_Unidades_Vendidas,
+    SUM(d.subtotal) AS Total_Ingresos_Generados
+FROM Detalle_Orden d
+INNER JOIN Platillos p ON d.platillo_id = p.platillo_id
+INNER JOIN Categorias c ON p.categoria_id = c.categoria_id
+INNER JOIN Ordenes o ON d.orden_id = o.orden_id
+WHERE o.estado_orden_id != (SELECT estado_orden_id FROM Estados_Orden WHERE nombre = 'Cancelado')
+GROUP BY c.nombre, p.nombre
+ORDER BY Total_Unidades_Vendidas DESC;
+
+--Reporte 2: Consumo Promedio y Frecuencia por Mesa
+SELECT 
+    m.numero_mesa AS Mesa,
+    COUNT(o.orden_id) AS Total_Ordenes_Atendidas,
+    COALESCE(SUM(o.total), 0.00) AS Total_Facturado,
+    COALESCE(ROUND(AVG(o.total), 2), 0.00) AS Consumo_Promedio_Por_Orden
+FROM Mesas m
+LEFT JOIN Ordenes o ON m.mesa_id = o.mesa_id
+GROUP BY m.numero_mesa
+ORDER BY Total_Facturado DESC;
+
+-- Rol para el módulo de Cocina (Solo lectura y actualización de estado)
+CREATE ROLE rol_cocina;
+GRANT SELECT ON Ordenes, Detalle_Orden, Platillos TO rol_cocina;
+GRANT UPDATE (estado_orden_id) ON Ordenes TO rol_cocina;
+
+-- Rol para la Caja / Administración (Acceso completo)
+CREATE ROLE rol_caja;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO rol_caja;
+
+--1. Vista: Estado Actual de las Mesas con sus Órdenes Activas
+CREATE OR REPLACE VIEW vw_EstadoMesasOrdenes AS
+SELECT 
+    m.mesa_id,
+    m.numero_mesa,
+    em.nombre AS estado_mesa,
+    m.capacidad,
+    o.orden_id,
+    eo.nombre AS estado_orden,
+    mp.nombre AS metodo_pago,
+    o.fecha_hora AS hora_orden,
+    COALESCE(SUM(d.cantidad), 0) AS total_platillos_pedidos,
+    COALESCE(o.total, 0.00) AS total_acumulado
+FROM Mesas m
+INNER JOIN Estados_Mesa em ON m.estado_mesa_id = em.estado_mesa_id
+LEFT JOIN Ordenes o ON m.mesa_id = o.mesa_id 
+    AND o.estado_orden_id NOT IN (
+        SELECT estado_orden_id FROM Estados_Orden WHERE nombre IN ('Entregado', 'Cancelado')
+    )
+LEFT JOIN Estados_Orden eo ON o.estado_orden_id = eo.estado_orden_id
+LEFT JOIN Metodos_Pago mp ON o.metodo_pago_id = mp.metodo_pago_id
+LEFT JOIN Detalle_Orden d ON o.orden_id = d.orden_id
+GROUP BY 
+    m.mesa_id, 
+    m.numero_mesa, 
+    em.nombre, 
+    m.capacidad, 
+    o.orden_id, 
+    eo.nombre, 
+    mp.nombre, 
+    o.fecha_hora, 
+    o.total
+ORDER BY m.numero_mesa ASC;
+
+SELECT * FROM vw_EstadoMesasOrdenes;
+
+--2. Vista: Control General de Inventario y Menú
+CREATE OR REPLACE VIEW vw_InventarioGeneral AS
+SELECT 
+    p.platillo_id,
+    c.nombre AS categoria,
+    p.nombre AS platillo,
+    p.precio,
+    p.stock_disponible,
+    p.activo AS disponible_en_menu,
+    CASE 
+        WHEN p.stock_disponible = 0 THEN 'AGOTADO'
+        WHEN p.stock_disponible <= 5 THEN 'STOCK CRÍTICO'
+        ELSE 'DISPONIBLE'
+    END AS estado_stock,
+    COALESCE(SUM(CASE WHEN mi.tipo_movimiento = 'SALIDA_VENTA' THEN mi.cantidad ELSE 0 END), 0) AS total_unidades_vendidas
+FROM Platillos p
+INNER JOIN Categorias c ON p.categoria_id = c.categoria_id
+LEFT JOIN Movimientos_Inventario mi ON p.platillo_id = mi.platillo_id
+GROUP BY 
+    p.platillo_id, 
+    c.nombre, 
+    p.nombre, 
+    p.precio, 
+    p.stock_disponible, 
+    p.activo
+ORDER BY c.nombre ASC, p.nombre ASC;
+
+SELECT * FROM vw_InventarioGeneral;

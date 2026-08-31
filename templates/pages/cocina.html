@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FetchFood — Cocina</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+
+<div class="app-cocina">
+    <header class="encabezado-cocina">
+        <div>
+            <p class="encabezado-cliente__marca" style="text-align:left;">FetchFood — Cocina</p>
+            <h1>Pedidos</h1>
+        </div>
+        <div class="encabezado-cocina__estado">
+            <span class="punto-en-vivo" id="punto-en-vivo" data-pausado="false" aria-hidden="true"></span>
+            <span id="ultima-actualizacion">Cargando…</span>
+            <button type="button" class="btn btn-secundario btn-sm" id="boton-pausa" aria-pressed="false">Pausar actualización automática</button>
+            <button type="button" class="btn btn-secundario btn-sm" id="boton-historial" aria-pressed="false">Ver historial</button>
+        </div>
+    </header>
+
+    <!-- Región accesible para anunciar cambios de conteo sin interrumpir -->
+    <p id="anuncio-cocina" class="sr-only" role="status" aria-live="polite"></p>
+
+    <main id="contenido-principal">
+        <div class="tablero-cocina" id="tablero-cocina">
+            <section class="columna-cocina columna-cocina--pendiente" aria-labelledby="titulo-pendiente">
+                <div class="columna-cocina__cabecera">
+                    <h2 id="titulo-pendiente"><img src="/static/img/ICONO-PEDIDO.png" alt="" class="icono-columna-cocina">Pendiente</h2>
+                    <span class="columna-cocina__contador" id="contador-pendiente">0</span>
+                </div>
+                <ul class="lista-pedidos" id="lista-pendiente" aria-live="polite"></ul>
+            </section>
+
+            <section class="columna-cocina columna-cocina--preparando" aria-labelledby="titulo-preparando">
+                <div class="columna-cocina__cabecera">
+                    <h2 id="titulo-preparando"><img src="/static/img/ICONO-COCINANDO.png" alt="" class="icono-columna-cocina">Preparando</h2>
+                    <span class="columna-cocina__contador" id="contador-preparando">0</span>
+                </div>
+                <ul class="lista-pedidos" id="lista-preparando" aria-live="polite"></ul>
+            </section>
+
+            <section class="columna-cocina columna-cocina--listo" aria-labelledby="titulo-listo">
+                <div class="columna-cocina__cabecera">
+                    <h2 id="titulo-listo"><img src="/static/img/ICONO-PLATO_LISTO.png" alt="" class="icono-columna-cocina">Listo</h2>
+                    <span class="columna-cocina__contador" id="contador-listo">0</span>
+                </div>
+                <ul class="lista-pedidos" id="lista-listo" aria-live="polite"></ul>
+            </section>
+        </div>
+
+        <section class="panel-admin oculto" id="panel-historial" aria-labelledby="titulo-historial">
+            <h2 id="titulo-historial">Historial (entregados y cancelados)</h2>
+            <ul class="lista-pedidos" id="lista-historial"></ul>
+        </section>
+    </main>
+</div>
+
+<script src="/static/js/main.js"></script>
+<script src="/static/js/cocina.js"></script>
+</body>
+</html>
