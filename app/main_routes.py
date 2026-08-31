@@ -174,7 +174,7 @@ def actualizarOrden(id):
         return jsonify({"error": "No se enviaron datos para actualizar."}), 400
 
     try:
-        if "pedidos" in retablas:
+        if "pedidos" in tablas:
             affected = restauranteServices.updateTabla("pedidos", {"id": id}, **payload)
         elif "ordenes" in tablas:
             affected = restauranteServices.updateTabla("ordenes", {"id": id}, **payload)
