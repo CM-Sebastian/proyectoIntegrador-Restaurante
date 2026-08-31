@@ -21,6 +21,3 @@ class appConfig:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-
-    #Restauracion de DB
-    BACKUP_FILE = os.getenv("DB_BACKUP")
