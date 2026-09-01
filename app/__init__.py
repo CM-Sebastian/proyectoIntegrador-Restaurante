@@ -1,8 +1,8 @@
 from flask import Flask
 import os
-from ..database.models import restauranteModels
-from ..config import appConfig
-from .main_routes import mainRoutes
+from database.models import restauranteModels
+from config import appConfig
+from main_routes import mainRoutes
 
 
 def create_app():
