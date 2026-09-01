@@ -483,18 +483,22 @@ function actualizarBotonVolver() {
  async function actualizarSeguimiento() {
   try {
     const ordenes = await FF.api.ordenesPorMesa(numeroMesa);
-    if (!estado.ultimaConfirmacion) return;
-    const desde = estado.ultimaConfirmacion.getTime() - 15000;
-    const relevantes = ordenes.filter(o => new Date(o.fecha_hora).getTime() >= desde);
-    if (!relevantes.length) { renderizarResumenPedido([]); return; }
+    if (!ordenes.length) {
+      renderizarResumenPedido([]);
+      return;
+    }
 
-    const idsRelevantes = relevantes.map(o => o.orden_id);
-    const activas = relevantes.filter(o => Number(o.estado_orden_id) < 4);
-    const paso = activas.length
-      ? mapaEstadoAPaso(Math.min(...activas.map(o => Number(o.estado_orden_id) || 1)))
-      : 4;
+    const activas = ordenes.filter(o => Number(o.estado_orden_id) < 4);
+    if (!activas.length) {
+      aplicarPaso(4);
+      renderizarResumenPedido([]);
+      return;
+    }
+
+    const paso = mapaEstadoAPaso(Math.max(...activas.map(o => Number(o.estado_orden_id) || 1)));
     aplicarPaso(paso);
 
+    const idsRelevantes = activas.map(o => o.orden_id).filter(id => id !== undefined && id !== null);
     try {
       const detalle = await FF.api.listarDetalleOrdenes();
       renderizarResumenPedido(detalle.filter(l => idsRelevantes.includes(l.orden_id)));
