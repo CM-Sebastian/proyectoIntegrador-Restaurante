@@ -1,6 +1,6 @@
 from flask import Flask
 import os
-from ..database.models import init_db
+from ..database.models import restauranteModels
 from ..config import appConfig
 from .main_routes import mainRoutes
 
@@ -16,7 +16,7 @@ def create_app():
     app.config.from_object(appConfig)
 
     # Inicializar base de datos
-    init_db(app)
+    restauranteModels.init_db(app)
 
     # Registrar Blueprint
     app.register_blueprint(mainRoutes)

@@ -1,16 +1,7 @@
 from flask import Blueprint, render_template, abort, jsonify, request, current_app
 from jinja2 import TemplateNotFound 
 from ..database.models import tablas
-from ..services.restaurante_service import (
-    selectTabla,
-    insertTabla,
-    updateTabla,
-    deleteTabla,
-    registrar_nueva_orden,
-    obtener_ordenes,
-    obtener_orden_por_id,
-    obtener_ordenes_por_mesa,
-)
+from ..services.restaurante_service import restauranteServices
 import os
 from werkzeug.utils import secure_filename
 
@@ -36,7 +27,7 @@ def mainRouteHandler(route):
 # Uso: GET /menu
 @mainRoutes.route('/menu')
 def viewMenu():
-    return jsonify(selectTabla('platillos'))
+    return jsonify(restauranteServices.selectTabla('platillos'))
 
 
 @mainRoutes.errorhandler(404)
@@ -48,7 +39,7 @@ def notfoundError(error):
 # Uso: GET /categorias
 @mainRoutes.route('/categorias', methods=['GET'])
 def viewCategorias():
-    return jsonify(selectTabla('categorias'))
+    return jsonify(restauranteServices.selectTabla('categorias'))
 
 
 # Crear una categoría nueva.
@@ -61,7 +52,7 @@ def crearCategoria():
         return jsonify({"error": "El campo 'nombre' es obligatorio."}), 400
 
     try:
-        insertTabla('categorias', **payload)
+        restauranteServices.insertTabla('categorias', **payload)
         return jsonify({"mensaje": "Categoría creada correctamente", "data": payload}), 201
     except Exception as exc:
         return jsonify({"error": "No se pudo crear la categoría.", "detalle": str(exc)}), 500
@@ -71,7 +62,7 @@ def crearCategoria():
 # Uso: GET /platillos
 @mainRoutes.route('/platillos', methods=['GET'])
 def viewPlatillos():
-    return jsonify(selectTabla('platillos'))
+    return jsonify(restauranteServices.selectTabla('platillos'))
 
 
 # Crear un platillo nuevo asociado a una categoría.
@@ -116,7 +107,7 @@ def crearPlatillo():
             archivo.save(os.path.join(carpeta, nombre_archivo))
             payload['imagen_url'] = f"/static/img/platillos/{nombre_archivo}"
 
-        insertTabla('platillos', **payload)
+        restauranteServices.insertTabla('platillos', **payload)
         return jsonify({"mensaje": "Platillo creado correctamente", "data": payload}), 201
     except Exception as exc:
         return jsonify({"error": "No se pudo crear el platillo.", "detalle": str(exc)}), 500
@@ -147,7 +138,7 @@ def actualizarPlatillo(id):
             archivo.save(os.path.join(carpeta, nombre_archivo))
             payload['imagen_url'] = f"/static/img/platillos/{nombre_archivo}"
 
-        affected = updateTabla('platillos', {'platillo_id': id}, **payload)
+        affected = restauranteServices.updateTabla('platillos', {'platillo_id': id}, **payload)
         if affected == 0:
             return jsonify({"error": "Platillo no encontrado."}), 404
         return jsonify({"mensaje": "Platillo actualizado correctamente"})
@@ -157,7 +148,7 @@ def actualizarPlatillo(id):
 # Uso: GET /platillo/<id>
 @mainRoutes.route('/platillo/<int:id>')
 def viewPlatillo(id):
-    platillos = selectTabla('platillos')
+    platillos = restauranteServices.selectTabla('platillos')
     for platillo in platillos:
         if platillo.get('id') == id:
             return jsonify(platillo)
@@ -168,7 +159,7 @@ def viewPlatillo(id):
 # Uso: GET /mesas
 @mainRoutes.route('/mesas', methods=['GET'])
 def viewMesas():
-    return jsonify(selectTabla('mesas'))
+    return jsonify(restauranteServices.selectTabla('mesas'))
 
 
 # Crear una mesa nueva.
@@ -181,7 +172,7 @@ def crearMesa():
         return jsonify({"error": "Se requiere un payload con los datos de la mesa."}), 400
 
     try:
-        insertTabla('mesas', **payload)
+        restauranteServices.insertTabla('mesas', **payload)
         return jsonify({"mensaje": "Mesa creada correctamente", "data": payload}), 201
     except Exception as exc:
         return jsonify({"error": "No se pudo crear la mesa.", "detalle": str(exc)}), 500
@@ -191,7 +182,7 @@ def crearMesa():
 # Uso: GET /mesa/<id>
 @mainRoutes.route('/mesa/<int:id>')
 def viewMesa(id):
-    mesas = selectTabla('mesas')
+    mesas = restauranteServices.selectTabla('mesas')
     for mesa in mesas:
         if mesa.get('id') == id:
             return jsonify(mesa)
@@ -208,7 +199,7 @@ def actualizarMesa(id):
         return jsonify({"error": "No se enviaron datos para actualizar."}), 400
 
     try:
-        affected = updateTabla('mesas', {'mesa_id': id}, **payload)
+        affected = restauranteServices.updateTabla('mesas', {'mesa_id': id}, **payload)
         if affected == 0:
             return jsonify({"error": "Mesa no encontrada."}), 404
         return jsonify({"mensaje": "Mesa actualizada correctamente"})
@@ -220,7 +211,7 @@ def actualizarMesa(id):
 # Uso: GET /ordenes
 @mainRoutes.route('/ordenes', methods=['GET'])
 def viewPedidos():
-    return jsonify(obtener_ordenes())
+    return jsonify(restauranteServices.obtener_ordenes())
 
 
 # Crear nueva orden desde el frontend.
@@ -239,7 +230,7 @@ def crearOrden():
         return jsonify({"error": "Faltan datos obligatorios: numero_mesa, platillo_id, cantidad, metodo_pago_id."}), 400
 
     try:
-        resultado = registrar_nueva_orden(numero_mesa, platillo_id, cantidad, metodo_pago_id)
+        resultado = restauranteServices.registrar_nueva_orden(numero_mesa, platillo_id, cantidad, metodo_pago_id)
         return jsonify(resultado), 201
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -251,7 +242,7 @@ def crearOrden():
 # Uso: GET /ordenes/<id>
 @mainRoutes.route('/ordenes/<int:id>', methods=['GET'])
 def viewPedido(id):
-    pedido = obtener_orden_por_id(id)
+    pedido = restauranteServices.obtener_orden_por_id(id)
     if pedido is None:
         return jsonify({"error": "Pedido no encontrado"}), 404
     return jsonify(pedido)
@@ -267,9 +258,9 @@ def actualizarOrden(id):
 
     try:
         if "pedidos" in tablas:
-            affected = updateTabla("pedidos", {"id": id}, **payload)
+            affected = restauranteServices.updateTabla("pedidos", {"id": id}, **payload)
         elif "ordenes" in tablas:
-            affected = updateTabla("ordenes", {"orden_id": id}, **payload)
+            affected = restauranteServices.updateTabla("ordenes", {"orden_id": id}, **payload)
         else:
             return jsonify({"error": "No existe la tabla de pedidos."}), 404
 
@@ -287,9 +278,9 @@ def actualizarOrden(id):
 def eliminarOrden(id):
     try:
         if "pedidos" in tablas:
-            affected = deleteTabla("pedidos", id=id)
+            affected = restauranteServices.deleteTabla("pedidos", id=id)
         elif "ordenes" in tablas:
-            affected = deleteTabla("ordenes", orden_id=id)
+            affected = restauranteServices.deleteTabla("ordenes", orden_id=id)
         else:
             return jsonify({"error": "No existe la tabla de pedidos."}), 404
 
@@ -305,11 +296,11 @@ def eliminarOrden(id):
 # Uso: GET /ordenes/mesa/<mesa_id>
 @mainRoutes.route('/ordenes/mesa/<int:mesa_id>', methods=['GET'])
 def viewPedidosMesa(mesa_id):
-    return jsonify(obtener_ordenes_por_mesa(mesa_id))
+    return jsonify(restauranteServices.obtener_ordenes_por_mesa(mesa_id))
 
 
 # Endpoints de depuración.
 # Uso: GET /test/<tabla>
 @mainRoutes.route('/test/<string:tabla>')
 def test(tabla):
-    return jsonify(selectTabla(tabla))
+    return jsonify(restauranteServices.selectTabla(tabla))
