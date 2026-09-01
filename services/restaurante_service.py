@@ -1,4 +1,7 @@
-from abc import ABC,abstractmethod
+﻿from abc import ABC,abstractmethod
+from datetime import datetime, date
+from decimal import Decimal
+
 from sqlalchemy import inspect, select, insert, update, delete, text
 from ..database.models import db, tablas
 
@@ -20,10 +23,30 @@ class baseServices(ABC):
     def deleteTabla(self, nombre_tabla, **where):
             pass
 
-
 class restauranteServices(baseServices):
 
     # Utileria
+    @staticmethod
+    def _valor_serializable(valor):
+        """
+        Convierte tipos que Flask/JS interpretan mal:
+        - datetime: a ISO 8601 SIN sufijo de zona.
+        La columna es 'timestamp without time zone' y guarda la hora LOCAL
+        de Ecuador. Si se deja que Flask la serialice con su formato por
+        defecto, la etiqueta como GMT y el navegador la interpreta como UTC,
+        desfasando los calculos de tiempo por 5 horas.
+        Un string ISO con 'T' y SIN 'Z'/offset es interpretado por
+        new Date(...) en JS como hora LOCAL del navegador.
+        - Decimal: a float, para que json.dumps no truene.
+        """
+        if isinstance(valor, datetime):
+            return valor.isoformat()
+        if isinstance(valor, date):
+            return valor.isoformat()
+        if isinstance(valor, Decimal):
+            return float(valor)
+        return valor
+
     @staticmethod
     def to_dict(data, nombre_tabla):
         """
@@ -35,13 +58,15 @@ class restauranteServices(baseServices):
 
         if isinstance(data, list):
             dataProcesada = [fila[nombre_tabla] for fila in data]
-            return [{c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs} for obj in dataProcesada]
+            return [
+                {c.key: restauranteServices._valor_serializable(getattr(obj, c.key)) for c in inspect(obj).mapper.column_attrs}
+                for obj in dataProcesada
+            ]
 
-        return {c.key: getattr(data, c.key) for c in inspect(data).mapper.column_attrs}
+        return {c.key: restauranteServices._valor_serializable(getattr(data, c.key)) for c in inspect(data).mapper.column_attrs}
 
 
     # Funciones o clases para usar queries
-
     @staticmethod
     def selectTabla(nombre_tabla):
         """Devuelve todos los registros de una tabla."""
@@ -54,7 +79,6 @@ class restauranteServices(baseServices):
 
 
     # Aqui debe ser abstraccion para mostrar lo que se puede hacer a simple vista
-
     @staticmethod
     def insertTabla(nombre_tabla, **kwargs):
         """Inserta un registro en una tabla."""
@@ -65,7 +89,6 @@ class restauranteServices(baseServices):
         resultado = db.session.execute(stmt)
         db.session.commit()
         return resultado
-
 
     @staticmethod
     def updateTabla(nombre_tabla, where=None, **kwargs):
@@ -85,13 +108,12 @@ class restauranteServices(baseServices):
             filtros.append(getattr(tabla, campo) == valor)
 
         if not filtros:
-            raise ValueError("Se requiere al menos una condición WHERE para actualizar.")
+            raise ValueError("Se requiere al menos una condicion WHERE para actualizar.")
 
         stmt = update(tabla).where(*filtros).values(**kwargs)
         resultado = db.session.execute(stmt)
         db.session.commit()
         return resultado.rowcount
-
 
     @staticmethod
     def deleteTabla(nombre_tabla, **where):
@@ -108,7 +130,7 @@ class restauranteServices(baseServices):
             filtros.append(getattr(tabla, campo) == valor)
 
         if not filtros:
-            raise ValueError("Se requiere al menos una condición WHERE para eliminar.")
+            raise ValueError("Se requiere al menos una condicion WHERE para eliminar.")
 
         stmt = delete(tabla).where(*filtros)
         resultado = db.session.execute(stmt)
@@ -118,10 +140,79 @@ class restauranteServices(baseServices):
 
     # Registrar nueva orden usando el procedimiento almacenado.
     # Uso: registrar_nueva_orden(numero_mesa, platillo_id, cantidad, metodo_pago_id)
-    def registrar_nueva_orden(numero_mesa, platillo_id, cantidad, metodo_pago_id):
-        """Ejecuta CALL public.sp_registrarnuevaorden(...)."""
+    @staticmethod
+    def _resolver_mesa_id(numero_mesa):
+        """Traduce el numero de mesa visible (Mesas.numero_mesa) a la PK interna (Mesas.mesa_id)."""
+        if "mesas" not in tablas:
+            return None
+        for m in restauranteServices.selectTabla("mesas"):
+            if m.get("numero_mesa") == numero_mesa:
+                return m.get("mesa_id")
+        return None
+
+    @staticmethod
+    def _orden_pendiente_reciente(numero_mesa):
+        """
+        Busca una orden en estado 'Pendiente' (estado_orden_id = 1) de esta mesa,
+        creada hace menos de 2 minutos. Se usa para agrupar todas las lineas de
+        un mismo carrito en UNA sola orden, en vez de una orden por platillo.
+        """
+        from datetime import datetime, timedelta
+
+        if "ordenes" not in tablas:
+            return None
+
+        mesa_id = restauranteServices._resolver_mesa_id(numero_mesa)
+        if mesa_id is None:
+            return None
+
+        registros = restauranteServices.selectTabla("ordenes")
+        limite = datetime.utcnow() - timedelta(minutes=2)
+        candidatas = [
+            r for r in registros
+            if r.get("mesa_id") == mesa_id
+            and r.get("estado_orden_id") == 1
+            and r.get("fecha_hora")
+            and r["fecha_hora"] >= limite
+        ]
+        if not candidatas:
+            return None
+        candidatas.sort(key=lambda r: r["fecha_hora"], reverse=True)
+        return candidatas[0]
+
+    @staticmethod
+    def registrar_nueva_orden(numero_mesa, platillo_id, cantidad, metodo_pago_id, forzar_nueva_orden=False):
+        """
+        Registra un platillo del carrito. Si ya existe una orden Pendiente
+        reciente para la misma mesa, inserta el platillo como una nueva linea
+        de Detalle_Orden en ESA orden en lugar de crear una orden nueva.
+        """
         if int(cantidad) <= 0:
             raise ValueError("La cantidad debe ser mayor que 0.")
+
+        orden_existente = None if forzar_nueva_orden else restauranteServices._orden_pendiente_reciente(int(numero_mesa))
+
+        if orden_existente is not None and "detalle_orden" in tablas:
+            platillo = None
+            if "platillos" in tablas:
+                for p in restauranteServices.selectTabla("platillos"):
+                    if p.get("platillo_id") == int(platillo_id):
+                        platillo = p
+                        break
+            precio_unitario = float(platillo["precio"]) if platillo else 0.0
+            subtotal = round(precio_unitario * int(cantidad), 2)
+
+            restauranteServices.insertTabla(
+                "detalle_orden",
+                orden_id=orden_existente["orden_id"],
+                platillo_id=int(platillo_id),
+                cantidad=int(cantidad),
+                precio_unitario=precio_unitario,
+                subtotal=subtotal,
+            )
+            nuevo_total = float(orden_existente.get("total") or 0) + subtotal
+            restauranteServices.updateTabla("ordenes", {"orden_id": orden_existente["orden_id"]}, total=nuevo_total)
+            return {"mensaje": "Platillo agregado a la orden existente", "orden_id": orden_existente["orden_id"]}
 
         stmt = text(
             """
@@ -147,8 +238,8 @@ class restauranteServices(baseServices):
         return {"mensaje": "Orden registrada correctamente"}
 
 
-    # Obtener todas las órdenes registradas.
-    # Uso: obtener_ordenes()
+    # Obtener todas las ordenes registradas.
+    @staticmethod
     def obtener_ordenes():
         if "pedidos" in tablas:
             return restauranteServices.selectTabla("pedidos")
@@ -158,7 +249,7 @@ class restauranteServices(baseServices):
 
 
     # Obtener una orden por identificador.
-    # Uso: obtener_orden_por_id(orden_id)
+    @staticmethod
     def obtener_orden_por_id(orden_id):
         for nombre in ("pedidos", "ordenes"):
             if nombre in tablas:
@@ -169,8 +260,8 @@ class restauranteServices(baseServices):
         return None
 
 
-    # Obtener órdenes de una mesa en específico.
-    # Uso: obtener_ordenes_por_mesa(mesa_id)
+    # Obtener ordenes de una mesa en especifico.
+    @staticmethod
     def obtener_ordenes_por_mesa(mesa_id):
         for nombre in ("pedidos", "ordenes"):
             if nombre in tablas:
@@ -181,5 +272,3 @@ class restauranteServices(baseServices):
                         filtrados.append(registro)
                 return filtrados
         return []
-
-

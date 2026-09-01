@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FetchFood — Administración</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#contenido-admin">Saltar al contenido</a>
+
+<div class="app-admin">
+    <nav class="admin-sidebar" aria-label="Navegación de administración">
+        <p class="admin-sidebar__marca">FetchFood</p>
+        <div class="admin-nav">
+            <a href="#mesas" data-vista="mesas" aria-current="page"> Mapa de mesas</a>
+            <a href="#menu" data-vista="menu"> Menú / Inventario</a>
+            <a href="#reportes" data-vista="reportes"> Reportes</a>
+        </div>
+        <div class="admin-sidebar__salir">
+            <a href="/">← Volver al inicio</a>
+        </div>
+    </nav>
+
+    <div class="admin-contenido" id="contenido-admin">
+        <header class="admin-encabezado">
+            <h1 class="admin-encabezado__titulo" id="titulo-vista-admin">Mapa de mesas</h1>
+        </header>
+
+        <!-- ================= VISTA: MAPA DE MESAS ================= -->
+        <section id="vista-mesas" aria-labelledby="titulo-vista-admin">
+            <div class="leyenda-mesas" aria-hidden="true">
+                <span class="leyenda-mesas__item"><span class="leyenda-mesas__punto leyenda-mesas__punto--libre"></span>Libre</span>
+                <span class="leyenda-mesas__item"><span class="leyenda-mesas__punto leyenda-mesas__punto--ocupada"></span>Ocupada</span>
+                <span class="leyenda-mesas__item"><span class="leyenda-mesas__punto leyenda-mesas__punto--reservada"></span>Reservada</span>
+            </div>
+            <div class="grilla-mesas" id="grilla-mesas">
+                <p>Cargando mesas…</p>
+            </div>
+        </section>
+
+        <!-- ================= VISTA: MENÚ / INVENTARIO ================= -->
+        <section id="vista-menu-admin" class="oculto" aria-labelledby="titulo-vista-admin">
+            <div class="panel-admin" style="margin-bottom:20px;">
+                <h2>Agregar platillo nuevo</h2>
+                <form id="form-nuevo-platillo">
+                    <div class="campo">
+                        <label for="nuevo-platillo-nombre">Nombre</label>
+                        <input type="text" id="nuevo-platillo-nombre" required>
+                    </div>
+                    <div class="campo">
+                        <label for="nuevo-platillo-descripcion">Descripción</label>
+                        <input type="text" id="nuevo-platillo-descripcion">
+                    </div>
+                    <div class="campo">
+                        <label for="nuevo-platillo-categoria">Categoría</label>
+                        <select id="nuevo-platillo-categoria"></select>
+                    </div>
+                    <div class="campo">
+                        <label for="nuevo-platillo-precio">Precio (USD)</label>
+                        <input type="number" id="nuevo-platillo-precio" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="campo">
+                        <label for="nuevo-platillo-stock">Stock inicial</label>
+                        <input type="number" id="nuevo-platillo-stock" min="0" step="1" required>
+                    </div>
+                    <div class="campo">
+                        <label for="nuevo-platillo-imagen">Imagen del platillo</label>
+                        <input type="file" id="nuevo-platillo-imagen" accept="image/png, image/jpeg, image/webp">
+                    </div>
+                    <button type="submit" class="btn btn-primario">Agregar platillo</button>
+                </form>
+            </div>
+
+            <div class="tabla-envoltorio">
+                <table class="tabla-datos">
+                    <caption>Gestión del menú</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Platillo</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col" class="num">Precio</th>
+                            <th scope="col" class="num">Stock</th>
+                            <th scope="col"><span class="sr-only">Acciones</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-tabla-menu">
+                        <tr><td colspan="5">Cargando menú…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= VISTA: REPORTES ================= -->
+        <section id="vista-reportes" class="oculto" aria-labelledby="titulo-vista-admin">
+            <div class="grilla-reportes">
+                <div class="panel-admin">
+                    <h2>Platos más vendidos</h2>
+                    <div class="grafica-barras" id="grafica-platos">
+                        <p>Cargando…</p>
+                    </div>
+                </div>
+                <div class="panel-admin">
+                    <h2>Actividad reciente</h2>
+                    <div class="tabla-envoltorio">
+                        <table class="tabla-datos">
+                            <caption class="sr-only">Pedidos recientes</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Pedido</th>
+                                    <th scope="col">Mesa</th>
+                                    <th scope="col">Fecha</th>
+                                    <th scope="col" class="num">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpo-actividad-reciente">
+                                <tr><td colspan="4">Cargando…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Modal genérico reutilizado para detalle de mesa / edición de platillo -->
+<div class="hoja-modal" id="modal-admin" data-abierta="false">
+    <div class="hoja-modal__fondo"></div>
+    <div class="hoja-modal__panel modal-admin__panel" role="dialog" aria-modal="true" aria-labelledby="modal-admin-titulo" tabindex="-1">
+        <div class="hoja-modal__cabecera">
+            <h2 id="modal-admin-titulo">Detalle</h2>
+            <button type="button" class="btn btn-icono btn-fantasma" id="modal-admin-cerrar" aria-label="Cerrar">✕</button>
+        </div>
+        <div id="modal-admin-cuerpo"></div>
+    </div>
+</div>
+
+<!-- Librería para generar códigos QR en el navegador (sin backend) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/static/js/main.js"></script>
+<script src="/static/js/admin.js"></script>
+</body>
+</html>

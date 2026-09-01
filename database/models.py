@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.automap import automap_base
 
+
 class Modelos:
 
     def __init__(self):
@@ -8,7 +9,7 @@ class Modelos:
         # 1. Crear la base para automap
         self.base = automap_base()
         self.__tablas = {}
-
+        
     @property
     def tablas(self):
         return self.__tablas

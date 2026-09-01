@@ -102,7 +102,7 @@ CREATE TABLE Movimientos_Inventario (
 -- Carga de Catálogos
 INSERT INTO Roles (nombre) VALUES ('Administrador'), ('Cajero'), ('Cocina'), ('Cliente');
 INSERT INTO Estados_Orden (nombre) VALUES ('Pendiente'), ('En Preparación'), ('Listo para Servir'), ('Entregado'), ('Cancelado');
-INSERT INTO Estados_Mesa (nombre) VALUES ('Disponible'), ('Ocupada');
+INSERT INTO Estados_Mesa (nombre) VALUES ('Disponible'), ('Ocupada'), ('Reservada');
 INSERT INTO Metodos_Pago (nombre) VALUES ('Efectivo'), ('Tarjeta de Crédito/Débito'), ('Transferencia/QR');
 INSERT INTO Categorias (nombre, descripcion) VALUES ('Hamburguesas', 'Hamburguesas artesanales'), ('Bebidas', 'Refrescos y jugos'), ('Acompañamientos', 'Papas y snacks');
 

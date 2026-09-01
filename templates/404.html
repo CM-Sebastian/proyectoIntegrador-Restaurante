@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>FentchFood — Página no encontrada</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <h1>Pagina no encontrada, volver a la pagina principal <a href="{{url_for('main_pages.mainPage')}}">Aqui</a></h1>
+<main style="max-width:480px;margin:15vh auto;text-align:center;padding:0 var(--space-3);">
+    <h1>Página no encontrada</h1>
+    <p>La página que buscas no existe o cambió de dirección.</p>
+    <a class="btn btn-primario" href="{{ url_for('main_pages.mainPage') }}">Volver al inicio</a>
+</main>
 </body>
 </html>

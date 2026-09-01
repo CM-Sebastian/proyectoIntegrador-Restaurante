@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FetchFood — Menú de la mesa</title>
+    <meta name="description" content="Menú digital de FentchFood: escanea, elige tus platillos y sigue tu pedido en tiempo real.">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+
+<div class="app-cliente">
+
+    <!-- ================= VISTA: MENÚ ================= -->
+    <div id="vista-menu">
+        <header class="encabezado-cliente">
+            <p class="encabezado-cliente__marca">FetchFood</p>
+            <h1 class="encabezado-cliente__mesa">Estás en la mesa #<strong id="num-mesa">1</strong></h1>
+        </header>
+
+        <main id="contenido-principal">
+            <nav class="tabs-categorias" id="tabs-categorias" role="tablist" aria-label="Categorías del menú"></nav>
+
+            <section class="seccion-platos" aria-labelledby="titulo-seccion-platos">
+                <h2 id="titulo-seccion-platos">Platos populares</h2>
+                <div class="grilla-platos" id="contenedor-platos" role="tabpanel" aria-live="polite">
+                    <p>Cargando menú…</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Región accesible que anuncia cambios de cantidad/total del carrito -->
+        <p id="anuncio-carrito" class="sr-only" role="status" aria-live="polite"></p>
+
+        <div class="barra-carrito oculto" id="barra-carrito">
+            <button type="button" class="btn btn-primario" id="boton-abrir-carrito" aria-haspopup="dialog" aria-expanded="false" aria-controls="modal-carrito">
+                <span>
+                    <img src="/static/img/icono-carrito.png" alt="" class="icono-carrito-btn">
+                    <span class="barra-carrito__contador" id="contador-carrito" aria-hidden="true">0</span>
+                    Ver pedido
+                </span>
+                <span id="total-carrito-barra">$0.00</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: CARRITO / TU PEDIDO ================= -->
+    <div class="hoja-modal" id="modal-carrito" data-abierta="false">
+        <div class="hoja-modal__fondo"></div>
+        <div class="hoja-modal__panel" role="dialog" aria-modal="true" aria-labelledby="titulo-carrito" tabindex="-1">
+            <div class="hoja-modal__cabecera">
+                <h2 id="titulo-carrito">Tu pedido</h2>
+                <button type="button" class="btn btn-icono btn-fantasma" id="cerrar-carrito" aria-label="Cerrar carrito">✕</button>
+            </div>
+
+            <div id="lista-carrito"></div>
+
+            <div class="resumen-total">
+                <span>Total a pagar</span>
+                <span class="resumen-total__monto" id="total-carrito">$0.00</span>
+            </div>
+
+            <form id="form-pago">
+                <h3 id="titulo-pago">Formas de pago</h3>
+                <div class="grupo-pago" role="radiogroup" aria-labelledby="titulo-pago">
+                    <div class="opcion-pago">
+                        <input type="radio" name="metodo-pago" id="pago-tarjeta" value="tarjeta" checked>
+                        <label for="pago-tarjeta"><img src="/static/img/ICONO-TARJETA.png" alt="" class="icono-pago">Tarjeta</label>
+                    </div>
+                    <div class="opcion-pago">
+                        <input type="radio" name="metodo-pago" id="pago-qr" value="qr">
+                        <label for="pago-qr"><img src="/static/img/ICONO-DEUNA.png" alt="" class="icono-pago">QR / Deuna</label>
+                    </div>
+                    <div class="opcion-pago">
+                        <input type="radio" name="metodo-pago" id="pago-efectivo" value="efectivo">
+                        <label for="pago-efectivo"><img src="/static/img/ICONO-EFECTIVO.png" alt="" class="icono-pago">Efectivo</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primario btn-block" id="boton-confirmar-pedido" disabled>Confirmar pedido</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= VISTA: ESTADO DEL PEDIDO ================= -->
+    <div id="vista-estado" class="oculto">
+        <header class="encabezado-cliente">
+            <p class="encabezado-cliente__marca">FentchFood</p>
+            <p class="encabezado-cliente__mesa">Estás en la mesa #<strong id="num-mesa-2"></strong></p>
+        </header>
+        <div class="pantalla-estado">
+            <div class="pantalla-estado__icono pantalla-estado__icono--ok" id="estado-icono" aria-hidden="true">✓</div>
+            <h2 id="estado-titulo">Pedido aceptado</h2>
+            <p id="estado-subtitulo">Puedes seguir viendo el menú mientras preparamos tu pedido. Te avisaremos aquí abajo cuando cambie de estado.</p>
+            <div class="resumen-pedido" id="resumen-pedido" aria-live="polite"></div>
+            <button type="button" class="btn btn-secundario" id="volver-menu">Seguir explorando el menú</button>
+        </div>
+    </div>
+
+    <!-- Barra de progreso del pedido, fija abajo, visible en ambas vistas -->
+    <div class="barra-progreso oculto" id="barra-progreso" data-paso="1" role="status" aria-live="polite">
+        <div class="barra-progreso__rail"><div class="barra-progreso__relleno" id="progreso-relleno" style="width:25%"></div></div>
+        <div class="barra-progreso__fila">
+            <span class="barra-progreso__num" id="progreso-num" aria-hidden="true">1</span>
+            <span class="barra-progreso__paso" id="progreso-texto">📋 Pedido recibido en cocina</span>
+            <button type="button" class="btn-ayuda" id="boton-ayuda" aria-haspopup="dialog" aria-controls="modal-ayuda" aria-label="Ayuda: llamar a un mesero">?</button>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: AYUDA / LLAMAR A UN MESERO ================= -->
+    <div class="hoja-modal" id="modal-ayuda" data-abierta="false">
+        <div class="hoja-modal__fondo"></div>
+        <div class="hoja-modal__panel" role="dialog" aria-modal="true" aria-labelledby="titulo-ayuda" tabindex="-1">
+            <div class="hoja-modal__cabecera">
+                <h2 id="titulo-ayuda">¿Necesitas ayuda?</h2>
+                <button type="button" class="btn btn-icono btn-fantasma" id="cerrar-ayuda" aria-label="Cerrar ayuda">✕</button>
+            </div>
+            <p>Si prefieres que te atienda un mesero directamente en tu mesa en lugar de usar la app, levanta la mano o avisa a cualquier miembro del personal — con gusto te ayudarán.</p>
+            <button type="button" class="btn btn-primario btn-block" id="entendido-ayuda">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/main.js"></script>
+<script src="/static/js/cliente.js"></script>
+</body>
+</html>
