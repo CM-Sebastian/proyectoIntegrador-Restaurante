@@ -16,7 +16,20 @@ class appConfig:
 
     #ORM Config
     #Uri alterada para deploy
-    SQLALCHEMY_DATABASE_URI = os.getenv("DB_URI","")
+    import os
+
+    #Deply
+    uri = os.getenv('DB_URI')
+
+    if uri:
+        # Cambia postgres:// o postgresql:// a postgresql+psycopg://
+        if uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql+psycopg://", 1)
+        elif uri.startswith("postgresql://"):
+            uri = uri.replace("postgresql://", "postgresql+psycopg://", 1)
+
+
+    SQLALCHEMY_DATABASE_URI = uri
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
