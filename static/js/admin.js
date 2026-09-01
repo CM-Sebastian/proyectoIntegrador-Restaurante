@@ -20,6 +20,7 @@
   const elTituloVista = document.getElementById('titulo-vista-admin');
 
   const elGrillaMesas = document.getElementById('grilla-mesas');
+  const elBotonNuevaMesa = document.getElementById('boton-nueva-mesa');
   const elTablaMenu = document.getElementById('cuerpo-tabla-menu');
   const elFormNuevoPlatillo = document.getElementById('form-nuevo-platillo');
   const elSelectCategoriaNuevo = document.getElementById('nuevo-platillo-categoria');
@@ -60,11 +61,62 @@
   // --- Carga inicial ---
   async function iniciar() {
     try { estado.estadosMesa = await FF.api.listarEstadosMesa(); } catch (_) { /* respaldo */ }
+    elBotonNuevaMesa.addEventListener('click', () => abrirFormularioNuevaMesa(elBotonNuevaMesa));
     await Promise.all([cargarMesas(), cargarMenu()]);
     irAVista((location.hash || '#mesas').slice(1));
     configurarFormularioPlatillo();
     elModalCerrar.addEventListener('click', cerrarModal);
     elModal.querySelector('.hoja-modal__fondo').addEventListener('click', cerrarModal);
+  }
+
+  function abrirFormularioNuevaMesa(disparador) {
+    const opciones = estado.estadosMesa.map(e => {
+      const id = e.estado_mesa_id ?? e.id;
+      return `<option value="${id}">${e.nombre}</option>`;
+    }).join('');
+
+    abrirModal('Crear nueva mesa', `
+      <form id="form-nueva-mesa">
+        <div class="campo">
+          <label for="nueva-mesa-numero">Número de mesa</label>
+          <input type="number" id="nueva-mesa-numero" min="1" step="1" required>
+        </div>
+        <div class="campo">
+          <label for="nueva-mesa-capacidad">Capacidad</label>
+          <input type="number" id="nueva-mesa-capacidad" min="1" step="1" value="2" required>
+        </div>
+        <div class="campo">
+          <label for="nueva-mesa-estado">Estado inicial</label>
+          <select id="nueva-mesa-estado" name="estado_mesa_id">${opciones}</select>
+        </div>
+        <button type="submit" class="btn btn-primario btn-block">Guardar mesa</button>
+      </form>
+    `, disparador);
+
+    document.getElementById('form-nueva-mesa').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const numeroMesa = Number(document.getElementById('nueva-mesa-numero').value);
+      const capacidad = Number(document.getElementById('nueva-mesa-capacidad').value);
+      const estadoMesaId = Number(document.getElementById('nueva-mesa-estado').value);
+
+      if (!numeroMesa || !capacidad) {
+        FF.notificar('Completa número y capacidad de la mesa.');
+        return;
+      }
+
+      try {
+        await FF.api.crearMesa({
+          numero_mesa: numeroMesa,
+          capacidad,
+          estado_mesa_id: estadoMesaId,
+        });
+        FF.notificar(`Mesa #${numeroMesa} creada correctamente.`);
+        cerrarModal();
+        await cargarMesas();
+      } catch (error) {
+        FF.notificar(error.message || 'No se pudo crear la mesa.');
+      }
+    });
   }
 
   //  -------MAPA DE MESAS -------
