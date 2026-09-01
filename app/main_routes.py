@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, abort, jsonify, request, current_app
 from jinja2 import TemplateNotFound 
-from database.models import tablas
-from services.restaurante_service import (
+from ..database.models import tablas
+from ..services.restaurante_service import (
     selectTabla,
     insertTabla,
     updateTabla,

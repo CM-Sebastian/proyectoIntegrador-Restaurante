@@ -1,7 +1,7 @@
 from flask import Flask
 import os
-from database.models import init_db
-from config import appConfig
+from ..database.models import init_db
+from ..config import appConfig
 from .main_routes import mainRoutes
 
 

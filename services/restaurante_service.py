@@ -1,5 +1,5 @@
 ﻿from sqlalchemy import inspect, select, insert, update, delete, text
-from database.models import db, tablas
+from ..database.models import db, tablas
 from datetime import datetime, date
 from decimal import Decimal
 
